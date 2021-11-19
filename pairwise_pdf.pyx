@@ -1,7 +1,7 @@
 '''__license__   = "GNU GPLv3 <https://www.gnu.org/licenses/gpl.txt>"
-__copyright__ = "2016, Joseph Kuruvilla"
-__author__    = "Joseph Kuruvilla <joseph.k@uni-bonn.de>"
-__version__   = "2.0"
+__copyright__ = "2021, Joseph Kuruvilla"
+__author__    = "Joseph Kuruvilla <joseph.kuruvilla@universite-paris-saclay.fr>"
+__version__   = "2.1"
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@ Changelog:
 ----------
 v2.0: Fixed the indexing problem (substituting jj instead of j) and better
       docstrings for the functions.
+v2.1: Updated the api of cdktree from scipy in pdf_1d_projection (other functions
+      need to be updated)
 '''
 
 # --------------------
@@ -184,16 +186,17 @@ def pdf_1d_projection(tree, np.ndarray[DTYPEf_t, ndim=2] ppos, np.ndarray[DTYPEf
   cdef np.ndarray[DTYPEff_t, ndim=2] counter = np.zeros((dist_bin, vel_bin))
 
   for i in range(ffirst, ssecond):
-      pairs = tree.query_radius(ppos[i], r, return_distance=True)
-      leng = len(pairs[0][0])
+      pairs = tree.query_ball_point(ppos[i], r, return_sorted=True)
+      leng = len(pairs)
       for j in range(leng):
-          jj = pairs[0][0][j]
-          if (jj > i):
-              dist = pairs[1][0][j]
-              diff = ((((vvel[jj,0]-vvel[i,0])*(ppos[jj,0]-ppos[i,0]))+((vvel[jj,1]-vvel[i,1])*(ppos[jj,1]-ppos[i,1]))+((vvel[jj,2]-vvel[i,2])*(ppos[jj,2]-ppos[i,2])))/dist) + offset
-              if (diff > vel_bin or diff < 0 or dist > r):
-                  rubbish_counter += 1
-              else:
-                  counter[(<int>dist),(<int>diff)]+=1
+          jj = pairs[j]
+          if (jj>i):
+              dist = sqrt( (ppos[i,0]-ppos[jj,0])**2 + (ppos[i,1]-ppos[jj,1])**2 + (ppos[i,2]-ppos[jj,2])**2 )
+              if (dist>=0 and dist<r):
+                  diff = ((((vvel[jj,0]-vvel[i,0])*(ppos[jj,0]-ppos[i,0]))+((vvel[jj,1]-vvel[i,1])*(ppos[jj,1]-ppos[i,1]))+((vvel[jj,2]-vvel[i,2])*(ppos[jj,2]-ppos[i,2]))) / dist) + offset
+                  if (diff > vel_bin or diff < 0 or dist > r):
+                      rubbish_counter += 1
+                  else:
+                      counter[(<int>dist),(<int>diff)]+=1
 
   return counter.flatten()
